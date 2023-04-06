@@ -1,16 +1,19 @@
 package mealplanner;
 
+import mealplanner.controller.Database;
 import mealplanner.model.Command;
 import mealplanner.model.Meal;
 import mealplanner.model.MealCategory;
 
-import java.util.ArrayList;
-import java.util.List;
 import java.util.Scanner;
 
+//TODO
+// - review other solutions
+// - commit, merge, resubmit
 public class Main {
     public static void main(String[] args) {
-        List<Meal> meals = new ArrayList<>();
+        Database db = new Database();
+        db.initDbStructures();
         Scanner scanner = new Scanner(System.in);
 
         mainLoop: while (true) {
@@ -23,23 +26,23 @@ public class Main {
             }
 
             switch (command) {
-                case ADD -> { addLogic(scanner, meals); }
-                case SHOW -> { showLogic(scanner, meals); }
-                case EXIT -> { System.out.println("Bye!"); break mainLoop;}
+                case ADD -> addLogic(scanner, db);
+                case SHOW -> showLogic(db);
+                case EXIT -> { db.closeConnections(); System.out.println("Bye!"); break mainLoop;}
             }
         }
     }
 
-    private static void showLogic(Scanner scanner, List<Meal> meals) {
-        if (meals.isEmpty()) {
+    private static void showLogic(Database db) {
+        if (db.isEmpty()) {
             System.out.println("No meals saved. Add a meal first.");
         } else {
             System.out.println();
-            meals.forEach(System.out::println);
+            db.getAllMeals().forEach(System.out::println);
         }
     }
 
-    private static void addLogic(Scanner scanner, List<Meal> meals) {
+    private static void addLogic(Scanner scanner, Database db) {
         MealCategory mealCategory = null;
         do {
             System.out.println("Which meal do you want to add (breakfast, lunch, dinner)?");
@@ -72,7 +75,7 @@ public class Main {
             }
         }
 
-        meals.add(new Meal(mealCategory, mealName, mealIngredients));
+        db.persistMeal(new Meal(mealCategory, mealName, mealIngredients));
         System.out.println("The meal has been added!");
     }
 }

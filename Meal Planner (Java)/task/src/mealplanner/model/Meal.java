@@ -13,6 +13,12 @@ public class Meal {
         this.mealIngredients = mealIngredients.split(",\\s*");
     }
 
+    public Meal(MealCategory mealCategory, String mealName, String[] mealIngredients) {
+        this.mealCategory = mealCategory;
+        this.mealName = mealName;
+        this.mealIngredients = mealIngredients;
+    }
+
     @Override
     public String toString() {
         StringBuilder sb = new StringBuilder();
@@ -22,5 +28,17 @@ public class Meal {
         Arrays.stream(this.mealIngredients).forEach(i -> sb.append(String.format("%s%n", i)));
 
         return sb.toString();
+    }
+
+    public MealCategory getMealCategory() {
+        return mealCategory;
+    }
+
+    public String getMealName() {
+        return mealName;
+    }
+
+    public String[] getMealIngredients() {
+        return mealIngredients;
     }
 }
