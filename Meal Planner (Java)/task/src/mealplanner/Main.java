@@ -5,11 +5,9 @@ import mealplanner.model.Command;
 import mealplanner.model.Meal;
 import mealplanner.model.MealCategory;
 
+import java.util.List;
 import java.util.Scanner;
 
-//TODO
-// - review other solutions
-// - commit, merge, resubmit
 public class Main {
     public static void main(String[] args) {
         Database db = new Database();
@@ -27,31 +25,40 @@ public class Main {
 
             switch (command) {
                 case ADD -> addLogic(scanner, db);
-                case SHOW -> showLogic(db);
+                case SHOW -> showLogic(scanner, db);
                 case EXIT -> { db.closeConnections(); System.out.println("Bye!"); break mainLoop;}
             }
         }
     }
 
-    private static void showLogic(Database db) {
-        if (db.isEmpty()) {
-            System.out.println("No meals saved. Add a meal first.");
-        } else {
-            System.out.println();
-            db.getAllMeals().forEach(System.out::println);
-        }
-    }
-
-    private static void addLogic(Scanner scanner, Database db) {
+    private static MealCategory getUserInput(Scanner scanner, String subject, String action) {
         MealCategory mealCategory = null;
         do {
-            System.out.println("Which meal do you want to add (breakfast, lunch, dinner)?");
+            System.out.printf("Which %s do you want to %s (breakfast, lunch, dinner)?%n", subject, action);
             try {
                 mealCategory = MealCategory.valueOf(scanner.nextLine().toUpperCase());
             } catch (IllegalArgumentException e) {
                 System.out.println("Wrong meal category! Choose from: breakfast, lunch, dinner.");
             }
         } while (mealCategory == null);
+
+        return mealCategory;
+    }
+
+    private static void showLogic(Scanner scanner, Database db) {
+        MealCategory mealCategory = getUserInput(scanner, "category", "print");
+
+        List<Meal> mealsFound = db.getMealsByCategory(mealCategory);
+        if (mealsFound.isEmpty()) {
+            System.out.println("No meals found.");
+        } else {
+            System.out.printf("Category: %s%n", mealCategory.toString().toLowerCase());
+            mealsFound.forEach(System.out::println);
+        }
+    }
+
+    private static void addLogic(Scanner scanner, Database db) {
+        MealCategory mealCategory = getUserInput(scanner, "meal", "add");
 
         String mealName;
         while (true) {

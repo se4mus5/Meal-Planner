@@ -13,25 +13,23 @@ public class Database {
     private static String DB_CREATE_URL;
     private static String DB_APP_URL;
     private static String USER;
-    private static String PASS;
+    private static String PASSWORD;
     private final Map<String, Integer> ingredientNameToId;
     private int sequenceMealsId;
     private int sequenceIngredientsId;
     private Connection dbConnection;
     public Database() {
 
-        try {
+        try (InputStream inputStream = Main.class.getResourceAsStream("/db.properties")) {
             Properties properties = new Properties();
-            final InputStream inputStream = Main.class.getResourceAsStream("/db.properties");
             properties.load(inputStream);
-            inputStream.close();
 
             DB_CREATE_URL = properties.getProperty("jdbc.createurl");
             DB_APP_URL = properties.getProperty("jdbc.url");
             USER = properties.getProperty("jdbc.username");
-            PASS = properties.getProperty("jdbc.password");
+            PASSWORD = properties.getProperty("jdbc.password");
 
-            dbConnection = DriverManager.getConnection(DB_CREATE_URL, USER, PASS);
+            dbConnection = DriverManager.getConnection(DB_CREATE_URL, USER, PASSWORD);
         } catch (SQLException | IOException e) {
             System.out.println("Database connection error, application shutting down.");
             e.printStackTrace();
@@ -45,25 +43,23 @@ public class Database {
         try {
             Statement statement = dbConnection.createStatement();
 
-            ResultSet resultSet = statement.executeQuery("SELECT FROM pg_database WHERE datname = 'meals_db'");
+            ResultSet resultSet = statement.executeQuery("select from pg_database where datname = 'meals_db'");
             if (!resultSet.isBeforeFirst()) { // check if result set is empty
                 statement.executeUpdate("create database meals_db");
-                statement.executeUpdate("alter role postgres with password '1111'");
-                statement.executeUpdate("grant all privileges on database meals_db to postgres");
             }
 
             statement.close();
             dbConnection.close();
         } catch (SQLException e) {
-            System.out.println("Error while creating application database. Application shutting down.");
+            System.out.println("Error while creating application database. Perhaps the app password is already set?");
             e.printStackTrace();
-            System.exit(1);
+            //System.exit(1);
         }
     }
 
     private void createAppTables() {
         try {
-            dbConnection = DriverManager.getConnection(DB_APP_URL, USER, PASS);
+            dbConnection = DriverManager.getConnection(DB_APP_URL, USER, PASSWORD);
             Statement statement = dbConnection.createStatement();
             // meals: category (varchar), meal (varchar), meal_id (integer)
             statement.executeUpdate("create table if not exists meals (" +
@@ -125,7 +121,7 @@ public class Database {
 
     private void initIngredientCache() {
         try {
-            dbConnection = DriverManager.getConnection(DB_APP_URL, USER, PASS);
+            dbConnection = DriverManager.getConnection(DB_APP_URL, USER, PASSWORD);
             Statement statement = dbConnection.createStatement();
             ResultSet resultSet = statement.executeQuery("select ingredient, ingredient_id from ingredients");
             if (resultSet.isBeforeFirst()) { // if result set is NOT empty
@@ -206,11 +202,14 @@ public class Database {
         return true;
     }
 
-    public List<Meal> getAllMeals() {
+    public List<Meal> getMealsByCategory(MealCategory category) {
         List<Meal> meals = new ArrayList<>();
         try {
-            Statement statement = dbConnection.createStatement();
-            ResultSet resultSet = statement.executeQuery("select category, meal, meal_id from meals");
+            String sql = "select category, meal, meal_id from meals where category = ?";
+            PreparedStatement preparedStatement = dbConnection.prepareStatement(sql);
+            preparedStatement.setString(1, category.toString().toLowerCase());
+
+            ResultSet resultSet = preparedStatement.executeQuery();
             while (resultSet.next()) {
                 MealCategory mealCategory = MealCategory.valueOf(resultSet.getString(1).toUpperCase());
                 String mealName = resultSet.getString(2);
@@ -219,7 +218,7 @@ public class Database {
                 Meal meal = new Meal(mealCategory, mealName, mealIngredients);
                 meals.add(meal);
             }
-            statement.close();
+            preparedStatement.close();
         } catch (SQLException e) {
             System.out.println("Error while reading meals from the database.");
             e.printStackTrace();
