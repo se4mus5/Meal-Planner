@@ -4,9 +4,12 @@ import mealplanner.controller.Database;
 import mealplanner.model.Command;
 import mealplanner.model.Meal;
 import mealplanner.model.MealCategory;
+import mealplanner.model.Weekday;
 
 import java.util.List;
 import java.util.Scanner;
+
+import static mealplanner.helper.Util.initCap;
 
 public class Main {
     public static void main(String[] args) {
@@ -15,7 +18,7 @@ public class Main {
         Scanner scanner = new Scanner(System.in);
 
         mainLoop: while (true) {
-            System.out.println("What would you like to do (add, show, exit)?");
+            System.out.println("What would you like to do (add, show, plan, exit)?");
             Command command;
             try {
                 command = Command.valueOf(scanner.nextLine().toUpperCase());
@@ -26,6 +29,7 @@ public class Main {
             switch (command) {
                 case ADD -> addLogic(scanner, db);
                 case SHOW -> showLogic(scanner, db);
+                case PLAN -> planLogic(scanner, db);
                 case EXIT -> { db.closeConnections(); System.out.println("Bye!"); break mainLoop;}
             }
         }
@@ -45,10 +49,57 @@ public class Main {
         return mealCategory;
     }
 
+    private static void planLogic(Scanner scanner, Database db) {
+
+        db.clearPlan();
+        for (Weekday weekday : Weekday.values()) {
+            String dayString = initCap(weekday.name());
+            System.out.println(dayString);
+            for (MealCategory mealCategory : MealCategory.values()) {
+                List<Meal> meals = db.getMealsByCategory(mealCategory, true);
+                meals.stream().map(Meal::getMealName).forEach(System.out::println);
+                System.out.printf("Choose the %s for %s from the list above:%n",
+                        mealCategory.toString().toLowerCase(), dayString);
+
+                String mealChoice = scanner.nextLine();
+                while (!isMealValid(meals, mealChoice)) {
+                    System.out.println("This meal doesn’t exist. Choose a meal from the list above.");
+                    mealChoice = scanner.nextLine();
+                }
+                db.persistPlanLineItem(mealCategory, mealChoice, weekday);
+            }
+
+            System.out.printf("Yeah! We planned the meals for %s.%n%n", dayString);
+        }
+
+        printPlan(db);
+    }
+
+    public static boolean isMealValid(List<Meal> meals, String mealChoice) {
+        return meals.stream().map(Meal::getMealName).anyMatch(m -> m.equals(mealChoice));
+    }
+
+    private static void printPlan(Database db) {
+        // print format
+        // Monday
+        // Breakfast: yogurt
+        // Lunch: tomato salad
+        // Dinner: ramen
+        List<String> mealPlan = db. getMealPlan();
+        int foodIndex = 0;
+        for (Weekday weekday : Weekday.values()) {
+            System.out.println(initCap(weekday.name()));
+            for (int i = 0; i < 3; i++){
+                System.out.println(mealPlan.get(foodIndex++));
+            }
+            System.out.println();
+        }
+    }
+
     private static void showLogic(Scanner scanner, Database db) {
         MealCategory mealCategory = getUserInput(scanner, "category", "print");
 
-        List<Meal> mealsFound = db.getMealsByCategory(mealCategory);
+        List<Meal> mealsFound = db.getMealsByCategory(mealCategory, false);
         if (mealsFound.isEmpty()) {
             System.out.println("No meals found.");
         } else {
