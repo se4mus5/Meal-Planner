@@ -1,5 +1,5 @@
 package mealplanner.model;
 
 public enum Command {
-    ADD, SHOW, PLAN, EXIT
+    ADD, SHOW, PLAN, SAVE, EXIT
 }

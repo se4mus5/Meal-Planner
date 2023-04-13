@@ -3,6 +3,7 @@ package mealplanner.controller;
 import mealplanner.Main;
 import mealplanner.model.Meal;
 import mealplanner.model.MealCategory;
+import mealplanner.model.ShoppingListItem;
 import mealplanner.model.Weekday;
 
 import java.io.IOException;
@@ -200,8 +201,6 @@ public class Database {
         return  ++sequenceIngredientsId;
     }
 
-    //TODO enhance: 2 use cases exist, one needs sorting, another one doe not
-    // for grading, start the app and exit (to initialize teh DB in a way that works w/ tests)
     public List<Meal> getMealsByCategory(MealCategory category, boolean sort) {
         List<Meal> meals = new ArrayList<>();
         try {
@@ -326,5 +325,41 @@ public class Database {
             e.printStackTrace();
             System.exit(1);
         }
+    }
+
+    public boolean isPlanTableEmpty() {
+        try {
+            Statement statement = dbConnection.createStatement();
+            ResultSet resultSet = statement.executeQuery("select meal_id from plan");
+            if (!resultSet.isBeforeFirst()) { // check if result set is empty
+                statement.close();
+                return true;
+            }
+            statement.close();
+        } catch (SQLException e) {
+            System.out.println("Error while checking whether the meal plan table has any data");
+            e.printStackTrace();
+            System.exit(1);
+        }
+        return false;
+    }
+
+    public List<ShoppingListItem> createShoppingList() {
+        List<ShoppingListItem> shoppingList = new ArrayList<>();
+        try {
+            Statement statement = dbConnection.createStatement();
+            ResultSet resultSet =
+                    statement.executeQuery("select ingredient, count(ingredient) from ingredients join plan using (meal_id) group by ingredient");
+            while (resultSet.next()) {
+                shoppingList.add(new ShoppingListItem(resultSet.getString(1), resultSet.getInt(2)));
+            }
+            statement.close();
+        } catch (SQLException e) {
+            System.out.println("Error while preparing shopping list.");
+            e.printStackTrace();
+            System.exit(1);
+        }
+
+        return shoppingList;
     }
 }

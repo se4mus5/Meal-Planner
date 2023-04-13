@@ -1,15 +1,13 @@
 package mealplanner;
 
 import mealplanner.controller.Database;
-import mealplanner.model.Command;
-import mealplanner.model.Meal;
-import mealplanner.model.MealCategory;
-import mealplanner.model.Weekday;
+import mealplanner.model.*;
 
 import java.util.List;
 import java.util.Scanner;
 
 import static mealplanner.helper.Util.initCap;
+import static mealplanner.helper.Util.persistShoppingListToFile;
 
 public class Main {
     public static void main(String[] args) {
@@ -18,7 +16,7 @@ public class Main {
         Scanner scanner = new Scanner(System.in);
 
         mainLoop: while (true) {
-            System.out.println("What would you like to do (add, show, plan, exit)?");
+            System.out.println("What would you like to do (add, show, plan, save, exit)?");
             Command command;
             try {
                 command = Command.valueOf(scanner.nextLine().toUpperCase());
@@ -30,8 +28,21 @@ public class Main {
                 case ADD -> addLogic(scanner, db);
                 case SHOW -> showLogic(scanner, db);
                 case PLAN -> planLogic(scanner, db);
+                case SAVE -> saveLogic(scanner, db);
                 case EXIT -> { db.closeConnections(); System.out.println("Bye!"); break mainLoop;}
             }
+        }
+    }
+
+    private static void saveLogic(Scanner scanner, Database db) {
+        if (db.isPlanTableEmpty()) {
+            System.out.println("Unable to save. Plan your meals first.");
+        } else {
+            System.out.println("Input a filename:");
+            String fileName = scanner.nextLine();
+            List<ShoppingListItem> shoppingList = db.createShoppingList();
+            persistShoppingListToFile(fileName, shoppingList);
+            System.out.println("Saved!");
         }
     }
 
